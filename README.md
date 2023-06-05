@@ -4,6 +4,12 @@ The current purpose of this repository is to:
 - create a docker volume and store webfiles from github repo
 - serve the 2048 game through a nginx webserver on Docker through port 8000 using Docker Volume
 - serve the dojo-jump game on a second nginx webserver through port 8080 using a bind-mount to access webfiles
+- use docker networks to assign containers an IP address and bridge networks to ensure that they  can communicate with eachother in local network
+#- use docker networks to allow containers to use the host machine's network stack through the host network
+- set up a Docker container running a Postgres database and connect it to the "to-do-list" Python Flask application
+	-(optional) show the configuration for creating a postres database using a volume
+- 
+
 
 ***Create a Docker Volume***
 Create a new docker volume and copy webfiles over from the gitgub repository
@@ -59,5 +65,53 @@ docker ps -a
 ```
 http:localhost:8080
 ```
+
+***Container Communication***
+Create container using a Ubuntu image to test connectivity between containers using ping
+```
+docker run -ti --name test_cont ubuntu                          #run a Ubuntu container named "test_cont" in a terminal interactive mode (-ti)
+```
+***Bridge Network***
+Use a newly configured bridge network in Docker to allow containers on the same host to communicate with eachother using the network bridge.
+
+Disconnect containers from the default network bridge
+```
+docker network disconnect bridge test_cont
+docker network disconnect bridge 2048_1
+docker network disconnect bridge dojo-jump
+```
+Conduct a ping test through the test_cont container terminal to show no internal or external connectivity. Configure a new network bridge:
+```
+docker network ls 						#list the available docker networks
+docker network inspect bridge | less				#show details of the bridge network and what containers are currently assigned to it
+docker network create --driver bridge docker_bridge_net 	#create a bridge network named "docker_bridge_net"
+docker network ls						#verify creation of the bridge network
+```
+Add containers to the new network bridge and use the ping command to verify internal connectivity between containers. View web application to verify connectivity to localhost
+```
+docker network connect docker_bridge_net test_cont
+docker network connect docker_bridge_net 2048_1 
+docker network connect docker_bridge_net dojo-jump
+```
+
+***Flask App using Postgres Database Container on Host Network***
+Set up a new Docker Container running a Postgres database and connect it to the "to-do-list" Python Flask application. The Flask application will use SQLAlchemy to interact with the database. Run the Postgres container using the host network instead of using a bridge network and port mapping. Use host networking in Docker to allow containers to directly use the localsystem's network stack. This is useful when containers need access to services running on the host machine or if low-level access is required to network resources
+
+First, create the Postgres database and configure it to run on the host network
+```
+docker run -d --network host --name mysql-container -e MYSQL_ROOT_PASSWORD=secret-pw -d mysql:latest
+```
+
+
+
+
+
+
+
+
+docker run -d --name web-server --network host nginx 		#starts a new nginx container named "web-server" and enables host networking "--network host"
+
+
+ 
 
 ***Clear the Environment***
